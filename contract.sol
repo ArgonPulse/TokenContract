@@ -1,44 +1,91 @@
-pragma solidity ^0.8.2;
+pragma solidity ^0.5.0;
 
-contract Token {
-    mapping(address => uint) public balances;
-    mapping(address => mapping(address => uint)) public allowance;
-    uint public totalSupply = 100000000 * 10 ** 18;
-    string public name = "Argonpulse";
-    string public symbol = "ARG";
-    uint public decimals = 18;
-    
-    event Transfer(address indexed from, address indexed to, uint value);
-    event Approval(address indexed owner, address indexed spender, uint value);
-    
-    constructor() {
-        balances[msg.sender] = totalSupply;
+// ----------------------------------------------------------------------------
+// ERC Token Standard #20 Interface
+//
+// ----------------------------------------------------------------------------
+contract ERC20Interface {
+    function totalSupply() public view returns (uint);
+    function balanceOf(address tokenOwner) public view returns (uint balance);
+    function allowance(address tokenOwner, address spender) public view returns (uint remaining);
+    function transfer(address to, uint tokens) public returns (bool success);
+    function approve(address spender, uint tokens) public returns (bool success);
+    function transferFrom(address from, address to, uint tokens) public returns (bool success);
+
+    event Transfer(address indexed from, address indexed to, uint tokens);
+    event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
+}
+
+// ----------------------------------------------------------------------------
+// Safe Math Library
+// ----------------------------------------------------------------------------
+contract SafeMath {
+    function safeAdd(uint a, uint b) public pure returns (uint c) {
+        c = a + b;
+        require(c >= a);
     }
-    
-    function balanceOf(address owner) public returns(uint) {
-        return balances[owner];
+    function safeSub(uint a, uint b) public pure returns (uint c) {
+        require(b <= a); c = a - b; } function safeMul(uint a, uint b) public pure returns (uint c) { c = a * b; require(a == 0 || c / a == b); } function safeDiv(uint a, uint b) public pure returns (uint c) { require(b > 0);
+        c = a / b;
     }
-    
-    function transfer(address to, uint value) public returns(bool) {
-        require(balanceOf(msg.sender) >= value, 'balance too low');
-        balances[to] += value;
-        balances[msg.sender] -= value;
-       emit Transfer(msg.sender, to, value);
+}
+
+
+contract CodeWithJoe is ERC20Interface, SafeMath {
+    string public name;
+    string public symbol;
+    uint8 public decimals; // 18 decimals is the strongly suggested default, avoid changing it
+
+    uint256 public _totalSupply;
+
+    mapping(address => uint) balances;
+    mapping(address => mapping(address => uint)) allowed;
+
+    /**
+     * Constrctor function
+     *
+     * Initializes contract with initial supply tokens to the creator of the contract
+     */
+    constructor() public {
+        name = "ArgonPulse";
+        symbol = "ARG";
+        decimals = 18;
+        _totalSupply = 1000000000000000000000000000;
+
+        balances[msg.sender] = _totalSupply;
+        emit Transfer(address(0), msg.sender, _totalSupply);
+    }
+
+    function totalSupply() public view returns (uint) {
+        return _totalSupply  - balances[address(0)];
+    }
+
+    function balanceOf(address tokenOwner) public view returns (uint balance) {
+        return balances[tokenOwner];
+    }
+
+    function allowance(address tokenOwner, address spender) public view returns (uint remaining) {
+        return allowed[tokenOwner][spender];
+    }
+
+    function approve(address spender, uint tokens) public returns (bool success) {
+        allowed[msg.sender][spender] = tokens;
+        emit Approval(msg.sender, spender, tokens);
         return true;
     }
-    
-    function transferFrom(address from, address to, uint value) public returns(bool) {
-        require(balanceOf(from) >= value, 'balance too low');
-        require(allowance[from][msg.sender] >= value, 'allowance too low');
-        balances[to] += value;
-        balances[from] -= value;
-        emit Transfer(from, to, value);
-        return true;   
+
+    function transfer(address to, uint tokens) public returns (bool success) {
+        balances[msg.sender] = safeSub(balances[msg.sender], tokens);
+        balances[to] = safeAdd(balances[to], tokens);
+        emit Transfer(msg.sender, to, tokens);
+        return true;
     }
-    
-    function approve(address spender, uint value) public returns (bool) {
-        allowance[msg.sender][spender] = value;
-        emit Approval(msg.sender, spender, value);
-        return true;   
+
+    function transferFrom(address from, address to, uint tokens) public returns (bool success) {
+        balances[from] = safeSub(balances[from], tokens);
+        allowed[from][msg.sender] = safeSub(allowed[from][msg.sender], tokens);
+        balances[to] = safeAdd(balances[to], tokens);
+        emit Transfer(from, to, tokens);
+        return true;
     }
 }
